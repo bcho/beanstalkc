@@ -30,6 +30,15 @@ DEFAULT_PRIORITY = 2 ** 31
 DEFAULT_TTR = 120
 
 
+PY3 = sys.version_info[0] > 2
+if PY3:
+    b = lambda x: bytes(x, sys.getdefaultencoding())
+    s = lambda x: x.decode(sys.getdefaultencoding())
+else:
+    b = lambda x: x
+    s = lambda x: x
+
+
 class BeanstalkcException(Exception): pass
 class UnexpectedResponse(BeanstalkcException): pass
 class CommandFailed(BeanstalkcException): pass
@@ -77,7 +86,7 @@ class Connection(object):
     def close(self):
         """Close connection to server."""
         try:
-            self._socket.sendall('quit\r\n')
+            self._socket.sendall(b('quit\r\n'))
         except socket.error:
             pass
         try:
@@ -91,7 +100,7 @@ class Connection(object):
         self.connect()
 
     def _interact(self, command, expected_ok, expected_err=[]):
-        SocketError.wrap(self._socket.sendall, command)
+        SocketError.wrap(self._socket.sendall, b(command))
         status, results = self._read_response()
         if status in expected_ok:
             return results
@@ -104,7 +113,7 @@ class Connection(object):
         line = SocketError.wrap(self._socket_file.readline)
         if not line:
             raise SocketError()
-        response = line.split()
+        response = s(line).split()
         return response[0], response[1:]
 
     def _read_body(self, size):
@@ -112,7 +121,7 @@ class Connection(object):
         SocketError.wrap(self._socket_file.read, 2)  # trailing crlf
         if size > 0 and not body:
             raise SocketError()
-        return body
+        return s(body)
 
     def _interact_value(self, command, expected_ok, expected_err=[]):
         return self._interact(command, expected_ok, expected_err)[0]
